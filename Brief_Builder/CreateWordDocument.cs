@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Brief_Builder.Models;
-using Brief_Builder.Services;     
+using Brief_Builder.Services;
 using Brief_Builder.Utils;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -31,23 +31,21 @@ namespace Brief_Builder
         //public async Task<HttpResponseMessage> Run(
         //    [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req,
         //    ILogger log)
-            public async Task<HttpResponseMessage> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestMessage req,
-        ILogger log)
-
-
+        public async Task<HttpResponseMessage> Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestMessage req,
+            ILogger log)
         {
             log.LogInformation("Processing CreateWordDocument request.");
 
             var json = await req.Content.ReadAsStringAsync();
+            log.LogInformation("Request Body: {0}", json);
             var data = JsonConvert.DeserializeObject<BriefBuilderInfo>(json);
             if ((data?.EmailIds?.Any() != true)
-             && (data?.Claims?.Any() != true)
-             && string.IsNullOrEmpty(data?.RecordId))
+             && (data?.Claims?.Any() != true))
             {
                 return req.CreateErrorResponse(
                     HttpStatusCode.BadRequest,
-                    "Please provide RecordId, or one or more EmailIds or Claims.");
+                    "Please provide one or more emailIds or claims in the request body.");
             }
 
             if (data.Claims?.Any() == true)
@@ -69,25 +67,26 @@ namespace Brief_Builder
                         continue;
                     }
 
-                    var email = _dataverse.RetrieveEmailRecord(emailId);
-                    var slot = email.GetAttributeValue<string>("pace_slot_display_name") ?? string.Empty;
-                    var from = ExtractParty(email.GetAttributeValue<EntityCollection>("from"));
-                    var to = ExtractParty(email.GetAttributeValue<EntityCollection>("to"));
-                    var body = HtmlHelper.StripHtml(
-                                    email.GetAttributeValue<string>("description") ?? string.Empty)
-                                .Trim();
-                    if (body.Length > 200) body = body.Substring(0, 200) + "…";
+                        var email = _dataverse.RetrieveEmailRecord(emailId);
+                        var slot = email.GetAttributeValue<string>("pace_slot_display_name") ?? string.Empty;
+                        var from = ExtractParty(email.GetAttributeValue<EntityCollection>("from"));
+                        var to = ExtractParty(email.GetAttributeValue<EntityCollection>("to"));
+                        var body = HtmlHelper.StripHtml(
+                                        email.GetAttributeValue<string>("description") ?? string.Empty)
+                                    .Trim();
+                        if (body.Length > 200)
+                            body = body.Substring(0, 200) + "…";
 
-                    emailInfos.Add(new EmailInfo
-                    {
-                        Id = emailId,
-                        Name = slot,
-                        From = from,
-                        To = to,
-                        Body = body
-                    });
+                        emailInfos.Add(new EmailInfo
+                        {
+                            Id = emailId,
+                            Name = slot,
+                            From = from,
+                            To = to,
+                            Body = body
+                        });
 
-                    log.LogInformation("Prepared EmailInfo for {0}", emailId);
+                        log.LogInformation("Prepared EmailInfo for {0}", emailId);
                 }
             }
 
@@ -98,39 +97,39 @@ namespace Brief_Builder
 
             log.LogInformation("Generated Word document: {0} bytes", wordBytes.Length);
 
+            // --------------------------------------------------------
+            // If you want to upload to SharePoint, uncomment this block
+            // --------------------------------------------------------
+            /*
             if (!string.IsNullOrEmpty(data.RecordId) &&
                 Guid.TryParse(data.RecordId, out var claimId))
             {
                 var locEntity = _dataverse.GetClaimDocumentLocation(claimId);
-                var docLoc = locEntity?.GetAttributeValue<string>("relativeurl");
-
+                var docLoc    = locEntity?.GetAttributeValue<string>("relativeurl");
                 if (!string.IsNullOrEmpty(docLoc))
                 {
-                    var parts = docLoc.Split(new[] { '/' }, 2);
+                    var parts   = docLoc.Split(new[] {'/'}, 2);
                     var library = parts[0];
-                    var folder = parts.Length > 1 ? parts[1] : string.Empty;
+                    var folder  = parts.Length > 1 ? parts[1] : string.Empty;
 
                     var (token, siteId) = SharepointService.GetSPTokenAndSiteId();
-
                     var driveId = SharepointService.GetDriveId(library, siteId, token);
 
                     var fileName = $"Brief_{claimId}.docx";
-                    var itemId = SharepointService.UploadDocumentToSharePoint(
-                        siteId,
-                        driveId,
-                        folder,
-                        fileName,
-                        wordBytes,
-                        token);
+                    var itemId   = SharepointService.UploadDocumentToSharePoint(
+                        siteId, driveId, folder, fileName, wordBytes, token);
 
-                    log.LogInformation("Uploaded document to SharePoint, itemId={0}", itemId);
+                    log.LogInformation("Uploaded to SharePoint, itemId={0}", itemId);
                 }
                 else
                 {
-                    log.LogWarning("No DocumentLocation (relativeurl) found for Claim {0}", claimId);
+                    log.LogWarning("No DocumentLocation found for Claim {0}", claimId);
                 }
             }
+            */
+            // --------------------------------------------------------
 
+            // 5) Return the .docx for download
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new ByteArrayContent(wordBytes)

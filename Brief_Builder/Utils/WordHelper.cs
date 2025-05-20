@@ -49,9 +49,7 @@ namespace Brief_Builder.Utils
                     body.Append(new Paragraph(new Run(new DocumentFormat.OpenXml.Wordprocessing.Text("Emails:"))));
                     foreach (var e in emails)
                     {
-                        var header = new Paragraph();
-                        header.Append(new Run(new DocumentFormat.OpenXml.Wordprocessing.Text($"— Email {e.Id}")));
-                        body.Append(header);
+
 
                         void AppendLine(string label, string value)
                         {
