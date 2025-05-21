@@ -35,12 +35,6 @@ namespace Brief_Builder.Services
             return JsonConvert.DeserializeObject<TokenResponse>(body);
         }
 
-        public static (string accessToken, string siteId) GetSPTokenAndSiteId()
-        {
-            var token = GetTokenResponse().AccessToken;
-            return (token, _siteId);
-        }
-
         public static string GetClaimDriveId(string accessToken)
         {
             const string driveName = "Claim";
@@ -58,22 +52,17 @@ namespace Brief_Builder.Services
                 .FirstOrDefault(d =>
                     string.Equals(d.Name, driveName, StringComparison.OrdinalIgnoreCase));
 
-            if (match != null)
-                return match.Id;
-
-            throw new InvalidOperationException(
-                $"Drive named '{driveName}' not found. Available: {string.Join(", ", root.Value.Select(d => d.Name))}");
+            return match.Id;
         }
 
         public static void UploadDocumentToSharePoint(
-            string siteId,
             string driveId,
             string folderPath,
             string fileName,
             byte[] fileContent,
             string accessToken)
         {
-            var apiUrl = $"https://graph.microsoft.com/v1.0/sites/{siteId}/drives/{driveId}/root:/{folderPath}/{fileName}:/content";
+            var apiUrl = $"https://graph.microsoft.com/v1.0/sites/{_siteId}/drives/{driveId}/root:/{folderPath}/{fileName}:/content";
 
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -83,8 +72,6 @@ namespace Brief_Builder.Services
 
             var resp = client.PutAsync(apiUrl, content).GetAwaiter().GetResult();
             var body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            if (!resp.IsSuccessStatusCode)
-                throw new InvalidOperationException($"Upload failed ({resp.StatusCode}): {body}");
         }
     }
 }
