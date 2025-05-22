@@ -1,10 +1,10 @@
-﻿using Brief_Builder.Models;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using Brief_Builder.Models;
+using Newtonsoft.Json;
 
 namespace Brief_Builder.Services
 {
@@ -35,24 +35,44 @@ namespace Brief_Builder.Services
             return JsonConvert.DeserializeObject<TokenResponse>(body);
         }
 
+        public static string SiteId => _siteId;
+
         public static string GetClaimDriveId(string accessToken)
         {
             const string driveName = "Claim";
             var apiUrl = $"https://graph.microsoft.com/v1.0/sites/{_siteId}/drives";
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", accessToken);
 
             var resp = client.GetAsync(apiUrl).GetAwaiter().GetResult();
             resp.EnsureSuccessStatusCode();
             var json = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
             var root = JsonConvert.DeserializeObject<SharepointDrives>(json);
-            var match = root.Value
-                .FirstOrDefault(d =>
-                    string.Equals(d.Name, driveName, StringComparison.OrdinalIgnoreCase));
+            var match = root.Value.FirstOrDefault(d =>
+                string.Equals(d.Name, driveName, StringComparison.OrdinalIgnoreCase));
 
             return match.Id;
+        }
+
+        public static byte[] DownloadDocumentFromSharePoint(
+            string driveId,
+            string fileId,
+            string accessToken)
+        {
+            var apiUrl =
+                $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
+                $"/drives/{driveId}/items/{fileId}/content";
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", accessToken);
+
+            var resp = client.GetAsync(apiUrl).GetAwaiter().GetResult();
+            resp.EnsureSuccessStatusCode();
+            return resp.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
         }
 
         public static void UploadDocumentToSharePoint(
@@ -62,16 +82,20 @@ namespace Brief_Builder.Services
             byte[] fileContent,
             string accessToken)
         {
-            var apiUrl = $"https://graph.microsoft.com/v1.0/sites/{_siteId}/drives/{driveId}/root:/{folderPath}/{fileName}:/content";
+            var apiUrl =
+                $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
+                $"/drives/{driveId}/root:/{folderPath}/{fileName}:/content";
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", accessToken);
 
             using var content = new ByteArrayContent(fileContent);
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            content.Headers.ContentType =
+                new MediaTypeHeaderValue("application/octet-stream");
 
             var resp = client.PutAsync(apiUrl, content).GetAwaiter().GetResult();
-            var body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            resp.EnsureSuccessStatusCode();
         }
     }
 }

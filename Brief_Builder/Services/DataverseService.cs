@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Brief_Builder.Models;
-using Brief_Builder.Utils;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
+using Brief_Builder.Models;
+using Microsoft.Extensions.Logging;
+using Brief_Builder.Utils;
 
 namespace Brief_Builder.Services
 {
@@ -28,9 +29,11 @@ namespace Brief_Builder.Services
             var fetch = $@"
                 <fetch top='1'>
                   <entity name='sharepointdocumentlocation'>
-                    <attribute name='relativeurl' />
+                    <attribute name='relativeurl'/>
                     <filter>
-                      <condition attribute='regardingobjectid' operator='eq' value='{claimId}' />
+                      <condition attribute='regardingobjectid'
+                            operator='eq'
+                            value='{claimId}'/>
                     </filter>
                   </entity>
                 </fetch>";
@@ -38,7 +41,8 @@ namespace Brief_Builder.Services
             return results.Entities.FirstOrDefault();
         }
 
-        public List<EmailInfo> BuildEmailInfos(BriefBuilderInfo data)
+        public List<EmailInfo> BuildEmailInfos(
+            BriefBuilderInfo data)
         {
             var list = new List<EmailInfo>();
             if (data.EmailIds == null) return list;
@@ -47,7 +51,7 @@ namespace Brief_Builder.Services
             {
                 var emailId = Guid.Parse(id);
                 var email = RetrieveEmailRecord(emailId);
-
+          
                 list.Add(new EmailInfo
                 {
                     Id = emailId,
@@ -58,21 +62,19 @@ namespace Brief_Builder.Services
                                 email.GetAttributeValue<string>("description") ?? "")
                 });
             }
-
             return list;
         }
+
         private static string ExtractParty(EntityCollection parties)
         {
             var arr = parties?.Entities
                 .Select(p => p.GetAttributeValue<string>("addressused")
                            ?? p.GetAttributeValue<EntityReference>("partyid")?.Name)
-                .Where(v => !string.IsNullOrEmpty(v))
+                .Where(s => !string.IsNullOrEmpty(s))
                 .ToArray();
-
             return (arr == null || arr.Length == 0)
                 ? "<none>"
                 : string.Join(", ", arr);
         }
-
     }
 }

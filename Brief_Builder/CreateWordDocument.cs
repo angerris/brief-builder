@@ -24,13 +24,27 @@ namespace Brief_Builder
         }
 
         [FunctionName("CreateWordDocument")]
-        public async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req)
+        public async Task<HttpResponseMessage> Run(
+            [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestMessage req)
         {
             var data = await ParseRequest(req);
-
             var emailInfos = _dataverse.BuildEmailInfos(data);
+            var imported = new List<ImportedFile>();
+            var token = SharepointService.GetTokenResponse().AccessToken;
+            var driveId = SharepointService.GetClaimDriveId(token);
 
-            var wordBytes = GenerateWordDocument(data, emailInfos);
+            if (data.SharePointIds != null)
+            {
+                foreach (var spId in data.SharePointIds)
+                {
+                    var bytes = SharepointService
+                        .DownloadDocumentFromSharePoint(driveId, spId, token);
+                    var text = DocxHelper.ExtractText(bytes);
+                    imported.Add(new ImportedFile { Id = spId, Text = text });
+                }
+            }
+
+            var wordBytes = GenerateWordDocument(data, emailInfos, imported);
 
             UploadToSharepoint(data, wordBytes);
 
@@ -38,7 +52,7 @@ namespace Brief_Builder
             {
                 Content = new ByteArrayContent(wordBytes)
             };
-
+   
             return response;
         }
 
@@ -47,28 +61,30 @@ namespace Brief_Builder
             var json = await req.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<BriefBuilderInfo>(json);
         }
-
         private static byte[] GenerateWordDocument(
-            BriefBuilderInfo data,
-            List<EmailInfo> emailInfos)
+           BriefBuilderInfo data,
+           List<EmailInfo> emailInfos, List<ImportedFile> imported)
         {
             return WordHelper.CreateDoc(
                 claims: data.Claims?.SelectMany(d => d)
                        ?? Enumerable.Empty<KeyValuePair<string, string>>(),
-                emails: emailInfos);
+                emails: emailInfos,
+                importedFiles: imported);
         }
-
-        private void UploadToSharepoint(BriefBuilderInfo data, byte[] wordBytes)
+        private void UploadToSharepoint(
+            BriefBuilderInfo data,
+            byte[] wordBytes)
         {
-
+ 
             var loc = _dataverse.GetClaimDocumentLocation(Guid.Parse(data.RecordId));
-            var folderPath = loc?.GetAttributeValue<string>("relativeurl");
+            var folderPath = loc?.GetAttributeValue<string>("relativeurl") ?? "";
 
             var token = SharepointService.GetTokenResponse().AccessToken;
             var driveId = SharepointService.GetClaimDriveId(token);
             var fileName = $"Brief_Report.docx";
 
-            SharepointService.UploadDocumentToSharePoint(driveId, folderPath, fileName, wordBytes, token);
+            SharepointService.UploadDocumentToSharePoint(
+                driveId, folderPath, fileName, wordBytes, token);
         }
     }
 }
