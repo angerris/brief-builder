@@ -37,10 +37,18 @@ namespace Brief_Builder
             {
                 foreach (var spId in data.SharePointIds)
                 {
-                    var bytes = SharepointService
-                        .DownloadDocumentFromSharePoint(driveId, spId, token);
-                    var text = DocxHelper.ExtractText(bytes);
-                    imported.Add(new ImportedFile { Id = spId, Text = text });
+                        var bytes = SharepointService
+                            .DownloadDocumentFromSharePoint( driveId, spId, token);
+
+                        var name = SharepointService
+                            .GetFileName( driveId, spId, token);
+
+                        imported.Add(new ImportedFile
+                        {
+                            Id = spId,
+                            Name = name,  
+                            Content = bytes
+                        });
                 }
             }
 
@@ -66,8 +74,7 @@ namespace Brief_Builder
            List<EmailInfo> emailInfos, List<ImportedFile> imported)
         {
             return WordHelper.CreateDoc(
-                claims: data.Claims?.SelectMany(d => d)
-                       ?? Enumerable.Empty<KeyValuePair<string, string>>(),
+                claims: data.Claims?.SelectMany(d => d) ?? Enumerable.Empty<KeyValuePair<string, string>>(),
                 emails: emailInfos,
                 importedFiles: imported);
         }
@@ -75,13 +82,12 @@ namespace Brief_Builder
             BriefBuilderInfo data,
             byte[] wordBytes)
         {
- 
             var loc = _dataverse.GetClaimDocumentLocation(Guid.Parse(data.RecordId));
             var folderPath = loc?.GetAttributeValue<string>("relativeurl") ?? "";
 
             var token = SharepointService.GetTokenResponse().AccessToken;
             var driveId = SharepointService.GetClaimDriveId(token);
-            var fileName = $"Brief_Report.docx";
+            var fileName = $"Brief_{DateTime.UtcNow:yyyyMMddHHmmss}.docx";
 
             SharepointService.UploadDocumentToSharePoint(
                 driveId, folderPath, fileName, wordBytes, token);

@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Brief_Builder.Models;
 using DocumentFormat.OpenXml;
+using System.Linq;
 
 namespace Brief_Builder.Utils
 {
@@ -17,30 +17,53 @@ namespace Brief_Builder.Utils
         {
             using var ms = new MemoryStream();
             using (var doc = WordprocessingDocument.Create(
-                ms, WordprocessingDocumentType.Document, true))
+                ms,
+                WordprocessingDocumentType.Document,
+                true))
             {
                 var mainPart = doc.AddMainDocumentPart();
                 mainPart.Document = new Document(new Body());
                 var body = mainPart.Document.Body;
 
                 WriteTitle(body, "Brief Builder Report");
+                body.Append(new Paragraph(new Run(new Text(string.Empty))));
                 BuildClaimsSection(body, claims);
                 BuildEmailsSection(body, emails);
-                BuildImportedFilesSection(body, importedFiles);
+                AppendImportedDocs(mainPart, body, importedFiles);
 
                 mainPart.Document.Save();
             }
-
             return ms.ToArray();
         }
 
         private static void WriteTitle(Body body, string text)
         {
-            var titlePara = new Paragraph(
+            var para = new Paragraph(
                 new ParagraphProperties(
                     new Justification { Val = JustificationValues.Center }),
-                new Run(new Text(text)));
-            body.Append(titlePara);
+                new Run(
+                    new RunProperties(
+                        new Bold(),
+                        new FontSize { Val = "32" }
+                    ),
+                    new Text(text)
+                ));
+            body.Append(para);
+        }
+
+        private static void WriteSubtitle(Body body, string text)
+        {
+            var para = new Paragraph(
+                new ParagraphProperties(
+                    new Justification { Val = JustificationValues.Left }),
+                new Run(
+                    new RunProperties(
+                        new Bold(),
+                        new FontSize { Val = "28" }
+                    ),
+                    new Text(text)
+                ));
+            body.Append(para);
         }
 
         private static void BuildClaimsSection(
@@ -48,9 +71,14 @@ namespace Brief_Builder.Utils
             IEnumerable<KeyValuePair<string, string>> claims)
         {
             if (claims == null || !claims.Any()) return;
-            body.Append(new Paragraph(new Run(new Text("Claims:"))));
+
+            WriteSubtitle(body, "Claims");
             foreach (var kv in claims)
-                body.Append(new Paragraph(new Run(new Text($"- {kv.Key}: {kv.Value}"))));
+            {
+                body.Append(new Paragraph(
+                    new Run(new Text($"- {kv.Key}: {kv.Value}"))));
+            }
+            body.Append(new Paragraph(new Run(new Text(string.Empty))));
             body.Append(new Paragraph(new Run(new Text(string.Empty))));
         }
 
@@ -59,38 +87,55 @@ namespace Brief_Builder.Utils
             IEnumerable<EmailInfo> emails)
         {
             if (emails == null || !emails.Any()) return;
-            body.Append(new Paragraph(new Run(new Text("Emails:"))));
+
+            WriteSubtitle(body, "Emails");
             foreach (var e in emails)
             {
-                AppendLine(body, "Name", e.Name);
-                AppendLine(body, "From", e.From);
-                AppendLine(body, "To", e.To);
-                body.Append(new Paragraph(new Run(new Text(e.Body))));
+                body.Append(new Paragraph(
+                    new Run(new Text($"Name: {e.Name}"))));
+                body.Append(new Paragraph(
+                    new Run(new Text($"From: {e.From}"))));
+                body.Append(new Paragraph(
+                    new Run(new Text($"To:   {e.To}"))));
+                body.Append(new Paragraph(
+                    new Run(new Text(e.Body))));
                 body.Append(new Paragraph(new Run(new Text(string.Empty))));
             }
         }
 
-        private static void BuildImportedFilesSection(
+        private static void AppendImportedDocs(
+            MainDocumentPart mainPart,
             Body body,
-            IEnumerable<ImportedFile> files)
+            IEnumerable<ImportedFile> importedFiles)
         {
-            if (files == null || !files.Any()) return;
-            body.Append(new Paragraph(new Run(new Text("SharePoint Files:"))));
-            foreach (var f in files)
-            {
-                foreach (var line in f.Text
-                                     .Split(new[] { '\r', '\n' },
-                                            System.StringSplitOptions.RemoveEmptyEntries))
-                {
-                    body.Append(new Paragraph(new Run(new Text(line))));
-                }
-                body.Append(new Paragraph(new Run(new Text(string.Empty))));
-            }
-        }
+            if (importedFiles == null) return;
 
-        private static void AppendLine(Body body, string label, string value)
-        {
-            body.Append(new Paragraph(new Run(new Text($"   {label}: {value}"))));
+            WriteSubtitle(body, "SharePoint Files");
+
+            int chunkId = 0;
+            foreach (var file in importedFiles)
+            {
+                body.Append(new Paragraph(
+                    new Run(new Break { Type = BreakValues.Page })));
+
+                var fileNamePara = new Paragraph(
+                    new ParagraphProperties(
+                        new Justification { Val = JustificationValues.Left }),
+                    new Run(new Text(file.Name))); 
+
+                body.Append(fileNamePara);
+
+                var partId = $"altChunkId{++chunkId}";
+                var chunk = mainPart.AddAlternativeFormatImportPart(
+                    AlternativeFormatImportPartType.WordprocessingML,
+                    partId);
+                using var stream = new MemoryStream(file.Content);
+                chunk.FeedData(stream);
+                body.Append(new AltChunk { Id = partId });
+            }
+
+            body.Append(new Paragraph(
+                new Run(new Break { Type = BreakValues.Page })));
         }
     }
 }

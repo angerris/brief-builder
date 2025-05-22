@@ -20,7 +20,8 @@ namespace Brief_Builder.Models
     public class ImportedFile
     {
         public string Id { get; set; }
-        public string Text { get; set; }
+        public string Name { get; set; }
+        public byte[] Content { get; set; }
     }
 
     public class ClaimField

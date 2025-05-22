@@ -97,5 +97,27 @@ namespace Brief_Builder.Services
             var resp = client.PutAsync(apiUrl, content).GetAwaiter().GetResult();
             resp.EnsureSuccessStatusCode();
         }
+
+        public static string GetFileName(
+            string driveId,
+            string itemId,
+            string accessToken)
+        {
+            var apiUrl =
+              $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
+              $"/drives/{driveId}/items/{itemId}" +
+              "?$select=name";
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", accessToken);
+
+            var resp = client.GetAsync(apiUrl).GetAwaiter().GetResult();
+            resp.EnsureSuccessStatusCode();
+            var json = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+            dynamic obj = JsonConvert.DeserializeObject(json);
+            return (string)obj.name;
+        }
     }
 }
