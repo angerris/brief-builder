@@ -16,12 +16,10 @@ namespace Brief_Builder
 {
     public class CreateWordDocument
     {
-        private readonly IOrganizationService _crmService;
         private readonly DataverseService _dataverse;
 
         public CreateWordDocument(IOrganizationService crmService)
         {
-            _crmService = crmService;
             _dataverse = new DataverseService(crmService);
         }
 
@@ -30,7 +28,7 @@ namespace Brief_Builder
         {
             var data = await ParseRequest(req);
 
-            var emailInfos = BuildEmailInfos(data);
+            var emailInfos = _dataverse.BuildEmailInfos(data);
 
             var wordBytes = GenerateWordDocument(data, emailInfos);
 
@@ -40,41 +38,17 @@ namespace Brief_Builder
             {
                 Content = new ByteArrayContent(wordBytes)
             };
-         
+
             return response;
         }
 
-        private async Task<BriefBuilderInfo> ParseRequest(HttpRequestMessage req)
+        private static async Task<BriefBuilderInfo> ParseRequest(HttpRequestMessage req)
         {
             var json = await req.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<BriefBuilderInfo>(json);
         }
 
-        private List<EmailInfo> BuildEmailInfos(BriefBuilderInfo data)
-        {
-            var list = new List<EmailInfo>();
-            if (data.EmailIds == null) return list;
-
-            foreach (var id in data.EmailIds)
-            {
-                var emailId = Guid.Parse(id);
-                var email = _dataverse.RetrieveEmailRecord(emailId);
-
-                list.Add(new EmailInfo
-                {
-                    Id = emailId,
-                    Name = email.GetAttributeValue<string>("pace_slot_display_name") ?? "",
-                    From = ExtractParty(email.GetAttributeValue<EntityCollection>("from")),
-                    To = ExtractParty(email.GetAttributeValue<EntityCollection>("to")),
-                    Body = HtmlHelper.StripHtml(
-                                email.GetAttributeValue<string>("description") ?? "")
-                });
-            }
-
-            return list;
-        }
-
-        private byte[] GenerateWordDocument(
+        private static byte[] GenerateWordDocument(
             BriefBuilderInfo data,
             List<EmailInfo> emailInfos)
         {
@@ -95,19 +69,6 @@ namespace Brief_Builder
             var fileName = $"Brief_Report.docx";
 
             SharepointService.UploadDocumentToSharePoint(driveId, folderPath, fileName, wordBytes, token);
-        }
-
-        private static string ExtractParty(EntityCollection parties)
-        {
-            var arr = parties?.Entities
-                .Select(p => p.GetAttributeValue<string>("addressused")
-                           ?? p.GetAttributeValue<EntityReference>("partyid")?.Name)
-                .Where(v => !string.IsNullOrEmpty(v))
-                .ToArray();
-
-            return (arr == null || arr.Length == 0)
-                ? "<none>"
-                : string.Join(", ", arr);
         }
     }
 }
