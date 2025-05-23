@@ -87,7 +87,7 @@ namespace Brief_Builder
 
             var token = SharepointService.GetTokenResponse().AccessToken;
             var driveId = SharepointService.GetClaimDriveId(token);
-            var fileName = $"Brief_{DateTime.UtcNow:yyyyMMddHHmmss}.docx";
+            var fileName = $"Brief_Report_{DateTime.UtcNow:yyyyMMddHHmmss}.docx";
 
             SharepointService.UploadDocumentToSharePoint(
                 driveId, folderPath, fileName, wordBytes, token);
