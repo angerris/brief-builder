@@ -3,24 +3,35 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading.Tasks;
 using Brief_Builder.Models;
 using Newtonsoft.Json;
 
 namespace Brief_Builder.Services
 {
-    public static class SharepointService
+    public class SharepointService
     {
-        private static readonly string _clientId = Environment.GetEnvironmentVariable("spClientID");
-        private static readonly string _clientSecret = Environment.GetEnvironmentVariable("spSecret");
-        private static readonly string _siteId = Environment.GetEnvironmentVariable("spSiteID");
-        private static readonly string _tenantId = Environment.GetEnvironmentVariable("spTenantID");
-
-        public static TokenResponse GetTokenResponse()
+        private readonly HttpClient _client;
+        private readonly string _accessToken;
+        private readonly string _siteId = Environment.GetEnvironmentVariable("spSiteID");
+        private readonly string _tenantId = Environment.GetEnvironmentVariable("spTenantID");
+        private readonly string _clientId = Environment.GetEnvironmentVariable("spClientID");
+        private readonly string _clientSecret = Environment.GetEnvironmentVariable("spSecret");
+        public SharepointService()  
         {
-            var authority = $"https://login.microsoftonline.com/{_tenantId}";
+            _client = new HttpClient();
+            var tokenResp = GetTokenResponse().GetAwaiter().GetResult();
+            _accessToken = tokenResp.AccessToken;
+            _client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", _accessToken);
+        }
+
+        public async Task<TokenResponse> GetTokenResponse()
+        {
+            var authority     = $"https://login.microsoftonline.com/{_tenantId}";
             var tokenEndpoint = $"{authority}/oauth2/v2.0/token";
 
-            using var client = new HttpClient();
+            using var tempClient = new HttpClient();
             var form = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string,string>("grant_type",    "client_credentials"),
@@ -29,93 +40,86 @@ namespace Brief_Builder.Services
                 new KeyValuePair<string,string>("scope",         "https://graph.microsoft.com/.default")
             });
 
-            var resp = client.PostAsync(tokenEndpoint, form).GetAwaiter().GetResult();
+            var resp = await tempClient.PostAsync(tokenEndpoint, form);
             resp.EnsureSuccessStatusCode();
-            var body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            var body = await resp.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<TokenResponse>(body);
         }
 
-        public static string SiteId => _siteId;
-
-        public static string GetClaimDriveId(string accessToken)
+        public async Task<string> GetClaimDriveId()
         {
             const string driveName = "Claim";
             var apiUrl = $"https://graph.microsoft.com/v1.0/sites/{_siteId}/drives";
 
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", accessToken);
-
-            var resp = client.GetAsync(apiUrl).GetAwaiter().GetResult();
+            var resp = await _client.GetAsync(apiUrl);
             resp.EnsureSuccessStatusCode();
-            var json = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-
+            var json = await resp.Content.ReadAsStringAsync();
             var root = JsonConvert.DeserializeObject<SharepointDrives>(json);
-            var match = root.Value.FirstOrDefault(d =>
-                string.Equals(d.Name, driveName, StringComparison.OrdinalIgnoreCase));
-
-            return match.Id;
+            return root.Value
+                .FirstOrDefault(d =>
+                    string.Equals(d.Name, driveName, StringComparison.OrdinalIgnoreCase))
+                ?.Id;
         }
 
-        public static byte[] DownloadDocumentFromSharePoint(
+        public async Task<byte[]> DownloadDocumentAsPDFFromSharePoint(
             string driveId,
-            string fileId,
-            string accessToken)
+            string itemId)
+        {
+            var apiUrl =
+                $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
+                $"/drives/{driveId}/items/{itemId}/content?format=pdf";
+
+            var resp = await _client.GetAsync(apiUrl);
+            resp.EnsureSuccessStatusCode();
+            return await resp.Content.ReadAsByteArrayAsync();
+        }
+
+        public async Task<byte[]> DownloadDocumentFromSharePoint(
+            string driveId,
+            string fileId)
         {
             var apiUrl =
                 $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
                 $"/drives/{driveId}/items/{fileId}/content";
 
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", accessToken);
-
-            var resp = client.GetAsync(apiUrl).GetAwaiter().GetResult();
+            var resp = await _client.GetAsync(apiUrl);
             resp.EnsureSuccessStatusCode();
-            return resp.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+            return await resp.Content.ReadAsByteArrayAsync();
         }
 
-        public static void UploadDocumentToSharePoint(
+        public async Task<string> UploadDocumentToSharePoint(
             string driveId,
             string folderPath,
             string fileName,
-            byte[] fileContent,
-            string accessToken)
+            byte[] fileContent)
         {
             var apiUrl =
                 $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
-                $"/drives/{driveId}/root:/{folderPath}/{fileName}:/content";
-
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", accessToken);
+                $"/drives/{driveId}/root:/{folderPath}/{fileName}:/content" +
+                "?@microsoft.graph.conflictBehavior=replace";
 
             using var content = new ByteArrayContent(fileContent);
             content.Headers.ContentType =
                 new MediaTypeHeaderValue("application/octet-stream");
 
-            var resp = client.PutAsync(apiUrl, content).GetAwaiter().GetResult();
+            var resp = await _client.PutAsync(apiUrl, content);
             resp.EnsureSuccessStatusCode();
+            var json = await resp.Content.ReadAsStringAsync();
+            dynamic obj = JsonConvert.DeserializeObject(json);
+            return (string)obj.id;
         }
 
-        public static string GetFileName(
+        public async Task<string> GetFileName(
             string driveId,
-            string itemId,
-            string accessToken)
+            string itemId)
         {
             var apiUrl =
-              $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
-              $"/drives/{driveId}/items/{itemId}" +
-              "?$select=name";
+                $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
+                $"/drives/{driveId}/items/{itemId}?$select=name";
 
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", accessToken);
-
-            var resp = client.GetAsync(apiUrl).GetAwaiter().GetResult();
+            var resp = await _client.GetAsync(apiUrl);
             resp.EnsureSuccessStatusCode();
-            var json = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-
+            var json = await resp.Content.ReadAsStringAsync();
             dynamic obj = JsonConvert.DeserializeObject(json);
             return (string)obj.name;
         }

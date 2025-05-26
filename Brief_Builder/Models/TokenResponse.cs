@@ -2,7 +2,7 @@
 
 namespace Brief_Builder.Models
 {
-    public class TokenResponse
+    public sealed class TokenResponse
     {
         [JsonProperty("access_token")]
         public string AccessToken { get; set; }

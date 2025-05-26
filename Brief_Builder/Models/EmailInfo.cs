@@ -2,7 +2,7 @@
 
 namespace Brief_Builder.Models
 {
-    public class EmailInfo
+    public sealed class EmailInfo
     {
         public Guid Id { get; set; }
         public string Name { get; set; }

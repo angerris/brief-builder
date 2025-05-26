@@ -23,11 +23,4 @@ namespace Brief_Builder.Models
         public string Name { get; set; }
         public byte[] Content { get; set; }
     }
-
-    public class ClaimField
-    {
-        public string DisplayName { get; set; }
-
-        public string Value { get; }
-    }
 }

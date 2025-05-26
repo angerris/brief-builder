@@ -4,7 +4,6 @@ using System.Linq;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Brief_Builder.Models;
-using Microsoft.Extensions.Logging;
 using Brief_Builder.Utils;
 
 namespace Brief_Builder.Services
@@ -18,7 +17,7 @@ namespace Brief_Builder.Services
             _service = service;
         }
 
-        public Entity RetrieveEmailRecord(Guid emailId)
+        private Entity RetrieveEmailRecord(Guid emailId)
         {
             var fields = new ColumnSet("pace_slot_display_name", "from", "to", "description");
             return _service.Retrieve("email", emailId, fields);
