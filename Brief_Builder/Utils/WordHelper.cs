@@ -109,9 +109,9 @@ namespace Brief_Builder.Utils
             Body body,
             IEnumerable<ImportedFile> importedFiles)
             {
-                if (importedFiles == null) return;
+            if (importedFiles == null || !importedFiles.Any()) return;
 
-                WriteSubtitle(body, "SharePoint Files");
+            WriteSubtitle(body, "SharePoint Files");
 
                 int chunkId = 0;
                 foreach (var file in importedFiles)
