@@ -9,12 +9,9 @@ using System.Text.RegularExpressions;
 
 namespace Brief_Builder.Utils
 {
-    public static class WordHelper
+    public class WordHelper
     {
-        public static byte[] CreateDoc(
-            IEnumerable<KeyValuePair<string, string>> claims,
-            IEnumerable<EmailInfo> emails,
-            IEnumerable<ImportedFile> importedFiles)
+        public byte[] CreateDoc(IEnumerable<KeyValuePair<string, string>> claims, IEnumerable<EmailInfo> emails, IEnumerable<ImportedFile> importedFiles)
         {
             using var ms = new MemoryStream();
             using (var doc = WordprocessingDocument.Create(
@@ -37,7 +34,7 @@ namespace Brief_Builder.Utils
             return ms.ToArray();
         }
 
-        private static void WriteTitle(Body body, string text)
+        private void WriteTitle(Body body, string text)
         {
             var para = new Paragraph(
                 new ParagraphProperties(
@@ -52,7 +49,7 @@ namespace Brief_Builder.Utils
             body.Append(para);
         }
 
-        private static void WriteSubtitle(Body body, string text)
+        private void WriteSubtitle(Body body, string text)
         {
             var para = new Paragraph(
                 new ParagraphProperties(
@@ -67,9 +64,7 @@ namespace Brief_Builder.Utils
             body.Append(para);
         }
 
-        private static void BuildClaimsSection(
-            Body body,
-            IEnumerable<KeyValuePair<string, string>> claims)
+        private void BuildClaimsSection(Body body, IEnumerable<KeyValuePair<string, string>> claims)
         {
             if (claims == null || !claims.Any()) return;
 
@@ -83,9 +78,7 @@ namespace Brief_Builder.Utils
             body.Append(new Paragraph(new Run(new Text(string.Empty))));
         }
 
-        private static void BuildEmailsSection(
-            Body body,
-            IEnumerable<EmailInfo> emails)
+        private void BuildEmailsSection(Body body, IEnumerable<EmailInfo> emails)
         {
             if (emails == null || !emails.Any()) return;
 
@@ -104,41 +97,38 @@ namespace Brief_Builder.Utils
             }
         }
 
-        private static void AppendImportedDocs(
-            MainDocumentPart mainPart,
-            Body body,
-            IEnumerable<ImportedFile> importedFiles)
-            {
+        private void AppendImportedDocs(MainDocumentPart mainPart, Body body,IEnumerable<ImportedFile> importedFiles)
+        {
             if (importedFiles == null || !importedFiles.Any()) return;
 
             WriteSubtitle(body, "SharePoint Files");
 
-                int chunkId = 0;
-                foreach (var file in importedFiles)
-                {
-                    body.Append(new Paragraph(
-                        new Run(new Break { Type = BreakValues.Page })));
-
-                    var displayName = Regex.Replace(file.Name, @"\.[^.]+$", "");
-
-                    var fileNamePara = new Paragraph(
-                        new ParagraphProperties(
-                            new Justification { Val = JustificationValues.Left }),
-                        new Run(new Text(displayName)));
-
-                    body.Append(fileNamePara);
-
-                    var partId = $"altChunkId{++chunkId}";
-                    var chunk = mainPart.AddAlternativeFormatImportPart(
-                        AlternativeFormatImportPartType.WordprocessingML,
-                        partId);
-                    using var stream = new MemoryStream(file.Content);
-                    chunk.FeedData(stream);
-                    body.Append(new AltChunk { Id = partId });
-                }
-
+            int chunkId = 0;
+            foreach (var file in importedFiles)
+            {
                 body.Append(new Paragraph(
                     new Run(new Break { Type = BreakValues.Page })));
+
+                var displayName = Regex.Replace(file.Name, @"\.[^.]+$", "");
+
+                var fileNamePara = new Paragraph(
+                    new ParagraphProperties(
+                        new Justification { Val = JustificationValues.Left }),
+                    new Run(new Text(displayName)));
+
+                body.Append(fileNamePara);
+
+                var partId = $"altChunkId{++chunkId}";
+                var chunk = mainPart.AddAlternativeFormatImportPart(
+                    AlternativeFormatImportPartType.WordprocessingML,
+                    partId);
+                using var stream = new MemoryStream(file.Content);
+                chunk.FeedData(stream);
+                body.Append(new AltChunk { Id = partId });
             }
+
+            body.Append(new Paragraph(
+                new Run(new Break { Type = BreakValues.Page })));
+        }
     }
 }

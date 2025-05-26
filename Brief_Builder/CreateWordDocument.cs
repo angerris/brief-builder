@@ -18,10 +18,13 @@ namespace Brief_Builder
     {
         private readonly DataverseService _dataverse;
         private readonly SharepointService _spService;
+        private readonly WordHelper _wordHelper;
         public CreateWordDocument(IOrganizationService crmService)
         {
             _dataverse = new DataverseService(crmService);
             _spService = new SharepointService();
+            _wordHelper = new WordHelper();
+
         }
 
         [FunctionName("CreateWordDocument")]
@@ -29,48 +32,22 @@ namespace Brief_Builder
         {
             var data = await ParseRequest(req);
             var emailInfos = _dataverse.BuildEmailInfos(data);
-            var imported = new List<ImportedFile>();
-            var driveId = _spService.GetClaimDriveId();
-
-            if (data.SharePointFiles != null && data.SharePointFiles.Any())
-            {
-                foreach (var sp in data.SharePointFiles)
-                {
-                    sp.TryGetValue("id", out var idValue);
-                    sp.TryGetValue("name", out var nameValue);
-
-                    var bytes = await _spService.DownloadDocumentFromSharePoint(await driveId, idValue);
-
-                    imported.Add(new ImportedFile
-                    {
-                        Id = idValue,
-                        Name = nameValue ?? null,
-                        Content = bytes
-                    });
-                }
-            }
-
+            var imported = await _spService.GetImportedFilesAsync(data.SharePointFiles);
             var wordBytes = GenerateWordDocument(data, emailInfos, imported);
-
             UploadToSharepoint(data, wordBytes);
 
-            var response = new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new ByteArrayContent(wordBytes)
-            };
-
-            return response;
+            return new HttpResponseMessage(HttpStatusCode.OK);
         }
 
-        private static async Task<BriefBuilderInfo> ParseRequest(HttpRequestMessage req)
+        private async Task<BriefBuilderInfo> ParseRequest(HttpRequestMessage req)
         {
             var json = await req.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<BriefBuilderInfo>(json);
         }
 
-        private static byte[] GenerateWordDocument(BriefBuilderInfo data, List<EmailInfo> emailInfos, List<ImportedFile> imported)
+        private  byte[] GenerateWordDocument(BriefBuilderInfo data, List<EmailInfo> emailInfos, List<ImportedFile> imported)
         {
-            return WordHelper.CreateDoc(
+            return _wordHelper.CreateDoc(
                 data.Claims?.SelectMany(d => d) ?? Enumerable.Empty<KeyValuePair<string, string>>(),
                  emailInfos, imported);
         }

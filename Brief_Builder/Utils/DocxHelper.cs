@@ -5,9 +5,9 @@ using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace Brief_Builder.Utils
 {
-    public static class DocxHelper
+    public class DocxHelper
     {
-        public static string ExtractText(byte[] docxBytes)
+        public string ExtractText(byte[] docxBytes)
         {
             using var ms = new MemoryStream(docxBytes);
             using var word = WordprocessingDocument.Open(ms, false);

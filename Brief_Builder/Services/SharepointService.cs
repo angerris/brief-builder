@@ -17,7 +17,8 @@ namespace Brief_Builder.Services
         private readonly string _tenantId = Environment.GetEnvironmentVariable("spTenantID");
         private readonly string _clientId = Environment.GetEnvironmentVariable("spClientID");
         private readonly string _clientSecret = Environment.GetEnvironmentVariable("spSecret");
-        public SharepointService()  
+
+        public SharepointService()
         {
             _client = new HttpClient();
             var tokenResp = GetTokenResponse().GetAwaiter().GetResult();
@@ -26,18 +27,18 @@ namespace Brief_Builder.Services
                 new AuthenticationHeaderValue("Bearer", _accessToken);
         }
 
-        public async Task<TokenResponse> GetTokenResponse()
+        private async Task<TokenResponse> GetTokenResponse()
         {
-            var authority     = $"https://login.microsoftonline.com/{_tenantId}";
+            var authority = $"https://login.microsoftonline.com/{_tenantId}";
             var tokenEndpoint = $"{authority}/oauth2/v2.0/token";
 
             using var tempClient = new HttpClient();
             var form = new FormUrlEncodedContent(new[]
             {
-                new KeyValuePair<string,string>("grant_type",    "client_credentials"),
-                new KeyValuePair<string,string>("client_id",     _clientId),
+                new KeyValuePair<string,string>("grant_type", "client_credentials"),
+                new KeyValuePair<string,string>("client_id", _clientId),
                 new KeyValuePair<string,string>("client_secret", _clientSecret),
-                new KeyValuePair<string,string>("scope",         "https://graph.microsoft.com/.default")
+                new KeyValuePair<string,string>("scope", "https://graph.microsoft.com/.default")
             });
 
             var resp = await tempClient.PostAsync(tokenEndpoint, form);
@@ -57,13 +58,10 @@ namespace Brief_Builder.Services
             var root = JsonConvert.DeserializeObject<SharepointDrives>(json);
             return root.Value
                 .FirstOrDefault(d =>
-                    string.Equals(d.Name, driveName, StringComparison.OrdinalIgnoreCase))
-                ?.Id;
+                    string.Equals(d.Name, driveName, StringComparison.OrdinalIgnoreCase))?.Id;
         }
 
-        public async Task<byte[]> DownloadDocumentAsPDFFromSharePoint(
-            string driveId,
-            string itemId)
+        public async Task<byte[]> DownloadDocumentAsPDFFromSharePoint(string driveId, string itemId)
         {
             var apiUrl =
                 $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
@@ -74,9 +72,7 @@ namespace Brief_Builder.Services
             return await resp.Content.ReadAsByteArrayAsync();
         }
 
-        public async Task<byte[]> DownloadDocumentFromSharePoint(
-            string driveId,
-            string fileId)
+        public async Task<byte[]> DownloadDocumentFromSharePoint(string driveId, string fileId)
         {
             var apiUrl =
                 $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
@@ -87,11 +83,7 @@ namespace Brief_Builder.Services
             return await resp.Content.ReadAsByteArrayAsync();
         }
 
-        public async Task<string> UploadDocumentToSharePoint(
-            string driveId,
-            string folderPath,
-            string fileName,
-            byte[] fileContent)
+        public async Task<string> UploadDocumentToSharePoint(string driveId, string folderPath, string fileName, byte[] fileContent)
         {
             var apiUrl =
                 $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
@@ -107,6 +99,35 @@ namespace Brief_Builder.Services
             var json = await resp.Content.ReadAsStringAsync();
             dynamic obj = JsonConvert.DeserializeObject(json);
             return (string)obj.id;
+        }
+
+        public async Task<List<ImportedFile>> GetImportedFilesAsync(IEnumerable<Dictionary<string, string>> fileRefs)
+        {
+            var imported = new List<ImportedFile>();
+            if (fileRefs == null || !fileRefs.Any()) return imported;
+
+            var driveId = await GetClaimDriveId();
+
+            foreach (var sp in fileRefs)
+            {
+                sp.TryGetValue("id", out var idValue);
+                sp.TryGetValue("name", out var nameValue);
+
+                if (string.IsNullOrEmpty(idValue))
+                    continue;
+
+
+                    var bytes = await DownloadDocumentFromSharePoint(driveId, idValue);
+
+                    imported.Add(new ImportedFile
+                    {
+                        Id = idValue,
+                        Name = nameValue,
+                        Content = bytes
+                    });
+            }
+
+            return imported;
         }
     }
 }
