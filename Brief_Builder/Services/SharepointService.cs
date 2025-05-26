@@ -108,20 +108,5 @@ namespace Brief_Builder.Services
             dynamic obj = JsonConvert.DeserializeObject(json);
             return (string)obj.id;
         }
-
-        public async Task<string> GetFileName(
-            string driveId,
-            string itemId)
-        {
-            var apiUrl =
-                $"https://graph.microsoft.com/v1.0/sites/{_siteId}" +
-                $"/drives/{driveId}/items/{itemId}?$select=name";
-
-            var resp = await _client.GetAsync(apiUrl);
-            resp.EnsureSuccessStatusCode();
-            var json = await resp.Content.ReadAsStringAsync();
-            dynamic obj = JsonConvert.DeserializeObject(json);
-            return (string)obj.name;
-        }
     }
 }

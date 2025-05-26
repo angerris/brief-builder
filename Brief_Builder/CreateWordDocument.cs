@@ -32,19 +32,20 @@ namespace Brief_Builder
             var imported = new List<ImportedFile>();
             var driveId = _spService.GetClaimDriveId();
 
-            if (data.SharePointIds != null)
+            if (data.SharePointFiles != null && data.SharePointFiles.Any())
             {
-                foreach (var spId in data.SharePointIds)
+                foreach (var sp in data.SharePointFiles)
                 {
-                    var bytes = _spService.DownloadDocumentFromSharePoint(await driveId, spId);
+                    sp.TryGetValue("id", out var idValue);
+                    sp.TryGetValue("name", out var nameValue);
 
-                    var name = _spService.GetFileName(await driveId, spId);
+                    var bytes = await _spService.DownloadDocumentFromSharePoint(await driveId, idValue);
 
                     imported.Add(new ImportedFile
                     {
-                        Id = spId,
-                        Name = await name,
-                        Content = await bytes
+                        Id = idValue,
+                        Name = nameValue ?? null,
+                        Content = bytes
                     });
                 }
             }
