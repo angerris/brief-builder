@@ -15,6 +15,7 @@
 */
 
 let page = 1;
+let emails = [];
 let sharePointList = [];
 let selectedEmailsId = [];
 const selectedClaimFieldList = [];
@@ -70,7 +71,7 @@ function main(results, claim) {
   const container = document.getElementById("container");
   const searchInp = document.querySelector("#search>input");
   const prevBtn = document.getElementById("prev");
-  let emails = [];
+  emails = getListOfEmails(data);
 
   if (data.length) {
     emails = getListOfEmails(data);
@@ -178,12 +179,23 @@ function moreDetails(emailId) {
 }
 
 async function next() {
+  selectedEmailsId = emails.filter((e) => e.isChecked).map((e) => e.id);
   if (page === 3) {
     await submitAction();
     return;
   }
   const { recordId, entityName } = getRecordId();
   if (page < 3) page++;
+  if (page === 1) {
+    selectedEmailsId = Array.from(document.querySelectorAll(".email-checkbox"))
+      .map((checkbox, index) => ({ checked: checkbox.checked, index }))
+      .filter((item) => item.checked)
+      .map((item) => {
+        const card = document.querySelectorAll(".email-card")[item.index];
+        return card ? emails[item.index].id : null;
+      })
+      .filter((id) => id !== null);
+  }
   updateNextButtonText();
   if (page === 2) {
     document.querySelector("#search").style.display = "none";
