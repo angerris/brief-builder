@@ -19,7 +19,7 @@ let emails = [];
 let sharePointList = [];
 let selectedEmailsId = [];
 const selectedClaimFieldList = [];
-let selectedSharePointsId = [];
+let selectedSharePointItems = [];
 
 function cancel() {
   window.close();
@@ -71,7 +71,6 @@ function main(results, claim) {
   const container = document.getElementById("container");
   const searchInp = document.querySelector("#search>input");
   const prevBtn = document.getElementById("prev");
-  emails = getListOfEmails(data);
 
   if (data.length) {
     emails = getListOfEmails(data);
@@ -346,20 +345,21 @@ function showSharePoints(sharePoints) {
 
     card
       .querySelector(".sharePoint-checkbox")
-      .addEventListener("click", () => selectedSharePoints(item.Id));
+      .addEventListener("click", () => toggleSharePointSelection(item.Id));
     card.querySelector(".sharePoint-checkbox").checked =
-      selectedSharePointsId.includes(item.Id);
+      selectedSharePointItems.some((sp) => sp.Id === item.Id);
+
     container.appendChild(card);
   });
 }
 
-function selectedSharePoints(sharePointId) {
-  if (!selectedSharePointsId.includes(sharePointId)) {
-    selectedSharePointsId.push(sharePointId);
+function toggleSharePointSelection(sharePointId) {
+  const idx = selectedSharePointItems.findIndex((sp) => sp.Id === sharePointId);
+  if (idx === -1) {
+    const sp = sharePointList.find((item) => item.Id === sharePointId);
+    if (sp) selectedSharePointItems.push({ Id: sp.Id, Name: sp.Name });
   } else {
-    selectedSharePointsId = selectedSharePointsId.filter(
-      (id) => id !== sharePointId
-    );
+    selectedSharePointItems.splice(idx, 1);
   }
 }
 
@@ -408,12 +408,10 @@ async function submitAction() {
     recordId: recordId,
     emailIds: selectedEmailsId,
     claims: selectedClaimFieldList,
-    sharepointFiles: sharePointList
-      .filter((f) => selectedSharePointsId.includes(f.Id))
-      .map((f) => ({
-        id: f.Id,
-        name: f.Name
-      }))
+    sharepointFiles: selectedSharePointItems.map((sp) => ({
+      id: sp.Id,
+      name: sp.Name
+    }))
   };
 
   const request = {
@@ -435,8 +433,5 @@ async function submitAction() {
   };
 
   await Xrm.WebApi.online.execute(request);
-
-  Xrm.Navigation.openAlertDialog({
-    text: JSON.stringify(request)
-  });
+  window.close();
 }
