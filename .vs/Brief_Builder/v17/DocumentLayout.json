@@ -7,12 +7,12 @@
       "RelativeMoniker": "D:0:0:{FE1BE6AE-0F2D-47F1-90FF-92BF1F9CF40B}|Brief_Builder\\Brief_Builder.csproj|solutionrelative:brief_builder\\createworddocument.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{FE1BE6AE-0F2D-47F1-90FF-92BF1F9CF40B}|Brief_Builder\\Brief_Builder.csproj|c:\\users\\arian\\desktop\\briefbuildernew\\brief_builder\\utils\\docxhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{FE1BE6AE-0F2D-47F1-90FF-92BF1F9CF40B}|Brief_Builder\\Brief_Builder.csproj|solutionrelative:brief_builder\\utils\\docxhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{FE1BE6AE-0F2D-47F1-90FF-92BF1F9CF40B}|Brief_Builder\\Brief_Builder.csproj|c:\\users\\arian\\desktop\\briefbuildernew\\brief_builder\\models\\briefbuilderinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{FE1BE6AE-0F2D-47F1-90FF-92BF1F9CF40B}|Brief_Builder\\Brief_Builder.csproj|solutionrelative:brief_builder\\models\\briefbuilderinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FE1BE6AE-0F2D-47F1-90FF-92BF1F9CF40B}|Brief_Builder\\Brief_Builder.csproj|c:\\users\\arian\\desktop\\briefbuildernew\\brief_builder\\utils\\docxhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FE1BE6AE-0F2D-47F1-90FF-92BF1F9CF40B}|Brief_Builder\\Brief_Builder.csproj|solutionrelative:brief_builder\\utils\\docxhelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{FE1BE6AE-0F2D-47F1-90FF-92BF1F9CF40B}|Brief_Builder\\Brief_Builder.csproj|c:\\users\\arian\\desktop\\briefbuildernew\\brief_builder\\models\\emailinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -62,7 +62,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "DocxHelper.cs",
               "DocumentMoniker": "C:\\Users\\arian\\Desktop\\BriefBuilderNew\\Brief_Builder\\Utils\\DocxHelper.cs",
               "RelativeDocumentMoniker": "Brief_Builder\\Utils\\DocxHelper.cs",
@@ -120,7 +120,7 @@
               "RelativeDocumentMoniker": "Brief_Builder\\CreateWordDocument.cs",
               "ToolTip": "C:\\Users\\arian\\Desktop\\BriefBuilderNew\\Brief_Builder\\CreateWordDocument.cs",
               "RelativeToolTip": "Brief_Builder\\CreateWordDocument.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAA6AAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwBAAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-05-20T15:43:01.044Z",
               "EditorCaption": ""
@@ -135,7 +135,8 @@
               "RelativeToolTip": "Brief_Builder\\local.settings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-05-19T12:58:46.811Z"
+              "WhenOpened": "2025-05-19T12:58:46.811Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -191,7 +192,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "BriefBuilderInfo.cs",
               "DocumentMoniker": "C:\\Users\\arian\\Desktop\\BriefBuilderNew\\Brief_Builder\\Models\\BriefBuilderInfo.cs",
               "RelativeDocumentMoniker": "Brief_Builder\\Models\\BriefBuilderInfo.cs",

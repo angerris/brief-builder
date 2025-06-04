@@ -15,6 +15,8 @@
 */
 
 let page = 1;
+let sections = [];
+let currentSectionName = "";
 let emails = [];
 let sharePointList = [];
 let selectedEmailsId = [];
@@ -31,11 +33,30 @@ window.onload = async function onLoad() {
     const emailsData = await getEmails(recordId);
     const claim = await getClaim(recordId, entityName);
     callGetSPLocationFilesAction(recordId);
-    main(emailsData, claim);
+
+    window.emailsData = emailsData;
+    window.claimData = claim;
+
+    document.getElementById("prev").addEventListener("click", prev);
+
+    showSectionNamePage();
   } catch (error) {
     alert(error.message);
   }
 };
+
+function showSectionNamePage() {
+  const container = document.getElementById("container");
+  document.querySelector("#search").style.display = "none";
+  document.getElementById("prev").style.display = "none";
+
+  container.innerHTML = `
+    <div class="section-name-container">
+      <label for="sectionName">Section Name:</label>
+      <input type="text" id="sectionName" />
+    </div>
+  `;
+}
 
 function getRecordId() {
   const decodedParams = decodeURIComponent(window.location.search).split("&");
@@ -84,9 +105,10 @@ function main(results, claim) {
   }
   prevBtn.addEventListener("click", () => prev(emails, claim));
 }
+
 function updateNextButtonText() {
   const nextBtn = document.getElementById("next");
-  nextBtn.innerText = page === 3 ? "Submit" : "Next";
+  nextBtn.innerText = page === 4 ? "Submit" : "Next";
 }
 
 function renderEmails(emails) {
@@ -165,8 +187,8 @@ function moreDetails(emailId) {
   };
 
   const navigationOptions = {
-    target: 2, // Opens in a dialog
-    position: 2, // Side panel
+    target: 2,
+    position: 2,
     width: {
       value: 50,
       unit: "%"
@@ -178,35 +200,76 @@ function moreDetails(emailId) {
 }
 
 async function next() {
-  selectedEmailsId = emails.filter((e) => e.isChecked).map((e) => e.id);
-  if (page === 3) {
+  if (page === 1) {
+    currentSectionName = document.getElementById("sectionName").value.trim();
+    selectedEmailsId = [];
+    selectedClaimFieldList.length = 0;
+    selectedSharePointItems.length = 0;
+  }
+
+  if (page === 2) {
+    selectedEmailsId = emails.filter((e) => e.isChecked).map((e) => e.id);
+  }
+
+  if (page === 4) {
+    sections.push({
+      sectionName: currentSectionName,
+      emailIds: selectedEmailsId,
+      claims: selectedClaimFieldList.slice(),
+      sharepointFiles: selectedSharePointItems.map((sp) => ({
+        id: sp.Id,
+        name: sp.Name
+      }))
+    });
     await submitAction();
     return;
   }
-  const { recordId, entityName } = getRecordId();
-  if (page < 3) page++;
-  if (page === 1) {
-    selectedEmailsId = Array.from(document.querySelectorAll(".email-checkbox"))
-      .map((checkbox, index) => ({ checked: checkbox.checked, index }))
-      .filter((item) => item.checked)
-      .map((item) => {
-        const card = document.querySelectorAll(".email-card")[item.index];
-        return card ? emails[item.index].id : null;
-      })
-      .filter((id) => id !== null);
-  }
+
+  page++;
   updateNextButtonText();
+
   if (page === 2) {
-    document.querySelector("#search").style.display = "none";
-    document.getElementById("container").innerHTML = "";
+    document.querySelector("#search").style.display = "block";
     document.getElementById("prev").style.display = "block";
 
-    const claim = await getClaim(recordId, entityName);
-    showClaimFileds(claim);
+    emails = getListOfEmails(window.emailsData.entities);
+    renderEmails(emails);
+    document
+      .querySelector("#search>input")
+      .addEventListener("input", (e) => search(e, emails));
   } else if (page === 3) {
+    document.querySelector("#search").style.display = "none";
+    document.getElementById("container").innerHTML = "";
+    showClaimFileds(window.claimData);
+  } else if (page === 4) {
     document.getElementById("container").innerHTML = "";
     showSharePoints(sharePointList);
+
+    const addSectionBtn = document.createElement("button");
+    addSectionBtn.id = "addSection";
+    addSectionBtn.innerText = "Add Section";
+    addSectionBtn.style.marginTop = "10px";
+    addSectionBtn.addEventListener("click", addSection);
+
+    document.getElementById("container").appendChild(addSectionBtn);
   }
+}
+
+function addSection() {
+  sections.push({
+    sectionName: currentSectionName,
+    emailIds: selectedEmailsId,
+    claims: selectedClaimFieldList.slice(),
+    sharepointFiles: selectedSharePointItems.map((sp) => ({
+      id: sp.Id,
+      name: sp.Name
+    }))
+  });
+
+  page = 1;
+  document.querySelector("#search").style.display = "none";
+  document.getElementById("prev").style.display = "none";
+  showSectionNamePage();
 }
 
 async function getClaim(claimId, entityName) {
@@ -297,19 +360,24 @@ function checkingSelectedFileds(key, value) {
   );
 }
 
-function prev(emails, claim) {
+function prev() {
   if (page > 1) page--;
   updateNextButtonText();
+
   if (page === 1) {
-    document.querySelector("#search").style.display = "block";
+    document.querySelector("#search").style.display = "none";
     document.getElementById("prev").style.display = "none";
-    renderEmails(emails);
+    showSectionNamePage();
   } else if (page === 2) {
+    document.querySelector("#search").style.display = "block";
+    document.getElementById("prev").style.display = "block";
+
+    emails = getListOfEmails(window.emailsData.entities);
+    renderEmails(emails);
+  } else if (page === 3) {
+    document.querySelector("#search").style.display = "none";
     document.getElementById("container").innerHTML = "";
-    selectedEmailsId = emails
-      .filter((item) => item.isChecked)
-      .map((item) => item.id);
-    showClaimFileds(claim);
+    showClaimFileds(window.claimData);
   }
 }
 
@@ -329,7 +397,7 @@ function search(event, emails) {
 function showSharePoints(sharePoints) {
   const container = document.getElementById("container");
 
-  if (!sharePoints.length) {
+  if (!sharePoints) {
     container.innerHTML = `<h3>Not Found</h3>`;
   }
 
@@ -363,7 +431,6 @@ function toggleSharePointSelection(sharePointId) {
   }
 }
 
-//  ------------ call Action to get Share Points files ----------------------------
 async function callGetSPLocationFilesAction(claimId) {
   const request = {
     TargetRef: {
@@ -380,7 +447,7 @@ async function callGetSPLocationFilesAction(claimId) {
             structuralProperty: 5
           }
         },
-        operationType: 0, // 0 = Action
+        operationType: 0,
         operationName: "pace_GetSPLocationFiles"
       };
       return metadata;
@@ -406,17 +473,11 @@ async function submitAction() {
 
   const data = {
     recordId: recordId,
-    emailIds: selectedEmailsId,
-    claims: selectedClaimFieldList,
-    sharepointFiles: selectedSharePointItems.map((sp) => ({
-      id: sp.Id,
-      name: sp.Name
-    }))
+    sections: sections
   };
 
   const request = {
     data: JSON.stringify(data),
-
     getMetadata: function () {
       return {
         boundParameter: null,
@@ -434,4 +495,7 @@ async function submitAction() {
 
   await Xrm.WebApi.online.execute(request);
   window.close();
+  Xrm.Navigation.openAlertDialog({
+    text: JSON.stringify(request)
+  });
 }
