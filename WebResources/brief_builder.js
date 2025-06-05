@@ -23,6 +23,13 @@ let selectedEmailsId = [];
 const selectedClaimFieldList = [];
 let selectedSharePointItems = [];
 
+function removeAddSectionButton() {
+  const btn = document.getElementById("addSection");
+  if (btn) {
+    btn.remove();
+  }
+}
+
 function cancel() {
   window.close();
 }
@@ -46,11 +53,10 @@ window.onload = async function onLoad() {
 };
 
 function showSectionNamePage() {
-  const container = document.getElementById("container");
+  removeAddSectionButton(); // ← hide it on page 1
   document.querySelector("#search").style.display = "none";
   document.getElementById("prev").style.display = "none";
-
-  container.innerHTML = `
+  document.getElementById("container").innerHTML = `
     <div class="section-name-container">
       <label for="sectionName">Section Name:</label>
       <input type="text" id="sectionName" />
@@ -242,16 +248,17 @@ async function next() {
     document.getElementById("container").innerHTML = "";
     showClaimFileds(window.claimData);
   } else if (page === 4) {
+    removeAddSectionButton();
     document.getElementById("container").innerHTML = "";
     showSharePoints(sharePointList);
 
     const addSectionBtn = document.createElement("button");
     addSectionBtn.id = "addSection";
     addSectionBtn.innerText = "Add Section";
-    addSectionBtn.style.marginTop = "10px";
     addSectionBtn.addEventListener("click", addSection);
 
-    document.getElementById("container").appendChild(addSectionBtn);
+    const footer = document.querySelector(".footer-buttons");
+    footer.appendChild(addSectionBtn);
   }
 }
 
@@ -267,6 +274,7 @@ function addSection() {
   });
 
   page = 1;
+  updateNextButtonText();
   document.querySelector("#search").style.display = "none";
   document.getElementById("prev").style.display = "none";
   showSectionNamePage();
@@ -365,16 +373,15 @@ function prev() {
   updateNextButtonText();
 
   if (page === 1) {
-    document.querySelector("#search").style.display = "none";
-    document.getElementById("prev").style.display = "none";
-    showSectionNamePage();
+    showSectionNamePage(); // already removes the button
   } else if (page === 2) {
+    removeAddSectionButton(); // ← hide it on page 2
     document.querySelector("#search").style.display = "block";
     document.getElementById("prev").style.display = "block";
-
     emails = getListOfEmails(window.emailsData.entities);
     renderEmails(emails);
   } else if (page === 3) {
+    removeAddSectionButton(); // ← hide it on page 3
     document.querySelector("#search").style.display = "none";
     document.getElementById("container").innerHTML = "";
     showClaimFileds(window.claimData);
