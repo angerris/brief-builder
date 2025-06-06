@@ -257,7 +257,7 @@ async function next() {
     addSectionBtn.innerText = "Add Section";
     addSectionBtn.addEventListener("click", addSection);
 
-    const footer = document.querySelector(".footer-buttons");
+    const footer = document.querySelector(".footer-buttons-right");
     footer.appendChild(addSectionBtn);
   }
 }

@@ -10,32 +10,21 @@ body {
   background: #fff;
   position: sticky;
   bottom: 0;
-  /* display: grid; */
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* 
-@media screen and (min-width: 900px) {
-  .footer-buttons {
-    grid-template-columns: repeat(5, 165px);
-  }
-
-  #cancel {
-    grid-column: 5/4;
-  }
+.footer-buttons-left {
+  display: flex;
+  justify-self: flex-start;
+  width: 40%;
 }
-
-@media screen and (min-width: 1200px) {
-  .footer-buttons {
-    grid-template-columns: repeat(10, 165px);
-  }
-
-  #cancel {
-    grid-column: 10/9;
-  }
-} */
+.footer-buttons-right {
+  display: flex;
+  justify-self: flex-end;
+  width: 60%;
+}
 
 .footer-buttons button {
   padding: 10px 20px;
@@ -95,7 +84,6 @@ body {
 
 #prev {
   display: none;
-  justify-self: flex-start !important;
 }
 
 /* // Page 1 // */
@@ -281,7 +269,6 @@ body {
   margin-top: 4px;
 }
 
-/* Style “Add Section” same as Next/Prev */
 #addSection {
   font-family: Segoe UI;
   display: inline-block;
